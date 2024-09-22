@@ -1,0 +1,40 @@
+name: Build Go
+# See https://docs.github.com/en/actions/sharing-automations/creating-workflow-templates-for-your-organization
+# See https://github.blog/developer-skills/github/using-reusable-workflows-github-actions/
+on:
+  workflow_call:
+    inputs:
+      golangci-lint:
+        required: false
+        type: string
+        default: "v1.61"
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      GO111MODULE: "on"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: ${{ inputs.golangci-lint }}
+
+      - name: Build
+        run: go build -v ./...
+
+      - name: Test
+        run: go test -v -race ./... -cover
