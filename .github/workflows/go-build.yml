@@ -1,6 +1,7 @@
 name: Build Go
 # See https://docs.github.com/en/actions/sharing-automations/creating-workflow-templates-for-your-organization
 # See https://github.blog/developer-skills/github/using-reusable-workflows-github-actions/
+# When a reusable workflow is triggered by a caller workflow, the github context is always associated with the caller workflow. The called workflow is automatically granted access to github.token and secrets.GITHUB_TOKEN.
 on:
   workflow_call:
     inputs:
@@ -8,6 +9,9 @@ on:
         required: false
         type: string
         default: "v1.61"
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -27,6 +31,15 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6

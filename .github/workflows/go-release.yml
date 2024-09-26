@@ -1,6 +1,7 @@
 name: Create Release
 # See https://docs.github.com/en/actions/sharing-automations/creating-workflow-templates-for-your-organization
 # See https://github.blog/developer-skills/github/using-reusable-workflows-github-actions/
+# When a reusable workflow is triggered by a caller workflow, the github context is always associated with the caller workflow. The called workflow is automatically granted access to github.token and secrets.GITHUB_TOKEN.
 on:
   workflow_call:
     inputs:
@@ -9,23 +10,20 @@ on:
         type: string
         default: ".github/changelog.yml"
 
-    secrets:
-      GITHUB_TOKEN:
-        description: "GitHub Token"
-        required: true
-
 permissions:
   contents: write
 
 jobs:
-  build:
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Unshallow
-        run: git fetch --prune --unshallow
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - name: Find Last Tag
+        if: success()
         id: last
         uses: jimschubert/query-tag-action@v2
         with:
@@ -34,6 +32,7 @@ jobs:
           commit-ish: 'HEAD~'
           skip-unshallow: 'true'
       - name: Find Current Tag
+        if: success()
         id: current
         uses: jimschubert/query-tag-action@v2
         with:
@@ -42,6 +41,7 @@ jobs:
           commit-ish: '@'
           skip-unshallow: 'true'
       - name: Create Changelog
+        if: success()
         id: changelog
         uses: jimschubert/beast-changelog-action@v1
         with:
@@ -51,10 +51,12 @@ jobs:
       - name: View Changelog
         run: cat .github/CHANGELOG.md
       - name: Create Release
+        if: success()
         uses: softprops/action-gh-release@v1
         with:
           body_path: ${{ github.workspace }}/.github/CHANGELOG.md
       - name: Wait 1 minute
         run: sleep 60
       - name: Update pkg.go.dev
+        if: success()
         run: curl https://proxy.golang.org/github.com/${{ github.repository }}/@v/${{ github.ref_name }}.info || echo "pkg.go.dev not updated"
