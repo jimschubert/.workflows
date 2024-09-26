@@ -10,6 +10,9 @@ on:
         type: string
         default: "v1.61"
 
+permissions:
+  contents: write
+
 jobs:
   build:
     uses: ./.github/workflows/go-build.yml
@@ -22,6 +25,10 @@ jobs:
     if: needs.build.outputs.result == 'success' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     runs-on: ubuntu-latest
     steps:
+      # goreleaser v4 removed the auto-snapshot feature, so we need to explicitly define the flag for non-tag builds
+      - if: ${{ !startsWith(github.ref, 'refs/tags/v') }}
+        run: echo "flags=--snapshot" >> $GITHUB_ENV
+
       - name: Checkout code
         uses: actions/checkout@v4
         with:
@@ -73,7 +80,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release --clean
+          args: release --clean ${{ env.flags }}
 
       - name: Cleanup
         if: always()
