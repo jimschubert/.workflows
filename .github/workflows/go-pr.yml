@@ -1,3 +1,11 @@
+# EXAMPLE:
+# jobs:
+#   go-pr:
+#     uses: jimschubert/.github/workflows-templates/go-pr.yml@main
+#     # Optional:
+#     with:
+#       go-version-file: 'custom/go.mod'
+#       coverage-retention-days: 7
 name: Pull Request
 on:
   workflow_call:
@@ -22,6 +30,8 @@ permissions:
   contents: read
   pull-requests: read
 
+# Concurrency ensures only one workflow runs per PR at a time
+# Uses PR number for pull_request events, falls back to ref for other events
 concurrency:
   group: ${{ github.repository }}-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
   cancel-in-progress: true

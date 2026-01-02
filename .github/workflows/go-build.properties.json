@@ -1,0 +1,12 @@
+{
+  "name": "Go Build Workflow",
+  "description": "A CI workflow template for building Go projects.",
+  "iconName": "golang",
+  "categories": [
+    "Go",
+    "continuous-integration"
+  ],
+  "filePatterns": [
+    "^go.mod$", "^go.sum$"
+  ]
+}
