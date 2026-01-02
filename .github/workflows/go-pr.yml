@@ -1,0 +1,66 @@
+name: Pull Request
+on:
+  workflow_call:
+    inputs:
+      go-version-file:
+        description: 'Path to go.mod file for Go version'
+        required: false
+        type: string
+        default: 'go.mod'
+      coverage-artifact-name:
+        description: 'Name of the coverage artifact'
+        required: false
+        type: string
+        default: 'pr-coverage'
+      coverage-retention-days:
+        description: 'Number of days to retain coverage artifact'
+        required: false
+        type: number
+        default: 3
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.repository }}-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  build:
+    name: Pull Request Build
+    runs-on: ubuntu-latest
+    steps:
+
+      - name: Check out code into the Go module directory
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Cache go module
+        uses: actions/cache@v5
+        with:
+          path: |
+            ~/.cache/go-build
+            ~/go/pkg/mod
+          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-go-
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: ${{ inputs.go-version-file }}
+          cache: false
+        id: go
+
+      - name: Build and Test
+        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Upload coverage
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ inputs.coverage-artifact-name }}
+          path: coverage.out
+          retention-days: ${{ inputs.coverage-retention-days }}
