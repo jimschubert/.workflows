@@ -1,6 +1,6 @@
 {
   "name": "Go Release Workflow",
-  "description": "A CI workflow template for releasing Go libraries which require a simple flow.",
+  "description": "A CI workflow template for releasing Go libraries which requires a simple flow.",
   "iconName": "golang",
   "categories": [
     "Go",

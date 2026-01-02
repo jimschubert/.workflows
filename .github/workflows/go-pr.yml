@@ -15,6 +15,11 @@ on:
         required: false
         type: string
         default: 'go.mod'
+      golangci-lint-version:
+        description: 'Version of golangci-lint to use'
+        required: false
+        type: string
+        default: 'v2.7.2'
       coverage-artifact-name:
         description: 'Name of the coverage artifact'
         required: false
@@ -30,16 +35,15 @@ permissions:
   contents: read
   pull-requests: read
 
-# Concurrency ensures only one workflow runs per PR at a time
-# Uses PR number for pull_request events, falls back to ref for other events
 concurrency:
-  group: ${{ github.repository }}-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-go-pr
   cancel-in-progress: true
 
 jobs:
 
   build:
     name: Pull Request Build
+    timeout-minutes: 15
     runs-on: ubuntu-latest
     steps:
 
@@ -48,24 +52,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Cache go module
-        uses: actions/cache@v5
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
-
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
           go-version-file: ${{ inputs.go-version-file }}
-          cache: false
+          cache: true
         id: go
 
-      - name: Build and Test
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: ${{ inputs.golangci-lint-version }}
+
+      - name: Build
+        run: go build -v ./...
+
+      - name: Test
         run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
 
       - name: Upload coverage

@@ -1,0 +1,9 @@
+{
+  "name": "Lint Go",
+  "description": "Lint Go code with golangci-lint",
+  "iconName": "go",
+  "categories": [
+    "Go",
+    "Lint"
+  ]
+}
