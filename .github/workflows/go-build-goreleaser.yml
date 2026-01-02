@@ -10,11 +10,21 @@ on:
         required: false
         type: string
         default: 'go.mod'
+      golangci-lint:
+        description: 'Version of golangci-lint to use (deprecated, use golangci-lint-version instead)'
+        required: false
+        type: string
+        default: 'v2.7.2'
       golangci-lint-version:
         description: 'Version of golangci-lint to use'
         required: false
         type: string
         default: 'v2.7.2'
+      changelog-config:
+        description: 'Path to beast-changelog config file (changelog generated only if file exists)'
+        required: false
+        type: string
+        default: '.github/changelog.yml'
 
 permissions:
   contents: write
@@ -53,6 +63,48 @@ jobs:
           go-version-file: ${{ inputs.go-version-file }}
           cache: true
 
+      - name: Check for Changelog Config
+        id: changelog-config
+        run: |
+          if [ -f "${{ inputs.changelog-config }}" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Find Last Tag
+        if: startsWith(github.ref, 'refs/tags/v') && steps.changelog-config.outputs.exists == 'true'
+        id: last
+        uses: jimschubert/query-tag-action@v2
+        with:
+          include: 'v*'
+          exclude: '*-rc*'
+          commit-ish: 'HEAD~'
+          skip-unshallow: 'true'
+
+      - name: Find Current Tag
+        if: startsWith(github.ref, 'refs/tags/v') && steps.changelog-config.outputs.exists == 'true'
+        id: current
+        uses: jimschubert/query-tag-action@v2
+        with:
+          include: 'v*'
+          exclude: '*-rc*'
+          commit-ish: '@'
+          skip-unshallow: 'true'
+
+      - name: Create Changelog
+        if: startsWith(github.ref, 'refs/tags/v') && steps.changelog-config.outputs.exists == 'true'
+        id: changelog
+        uses: jimschubert/beast-changelog-action@v1
+        with:
+          CONFIG_LOCATION: ${{ inputs.changelog-config }}
+          FROM: ${{ steps.last.outputs.tag }}
+          TO: ${{ steps.current.outputs.tag }}
+
+      - name: Set Release Notes Flag
+        if: startsWith(github.ref, 'refs/tags/v') && steps.changelog-config.outputs.exists == 'true'
+        run: echo "release_notes=--release-notes=${{ github.workspace }}/.github/CHANGELOG.md" >> $GITHUB_ENV
+
       - name: Check for Docker Environment
         shell: bash
         id: has-docker
@@ -87,7 +139,7 @@ jobs:
         with:
           distribution: goreleaser
           version: latest
-          args: release --clean ${{ env.flags }}
+          args: release --clean ${{ env.flags }} ${{ env.release_notes }}
 
       - name: Cleanup
         if: always()
