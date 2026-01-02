@@ -5,16 +5,42 @@ name: Build Go
 on:
   workflow_call:
     inputs:
-      golangci-lint:
+      go-version-file:
+        description: 'Path to go.mod file for Go version'
         required: false
         type: string
-        default: "v1.61"
+        default: 'go.mod'
+      golangci-lint:
+        description: 'Version of golangci-lint to use (deprecated, use golangci-lint-version instead)'
+        required: false
+        type: string
+        default: 'v2.7.2'
+      golangci-lint-version:
+        description: 'Version of golangci-lint to use'
+        required: false
+        type: string
+        default: 'v2.7.2'
+      coverage-artifact-name:
+        description: 'Name of the coverage artifact'
+        required: false
+        type: string
+        default: 'coverage'
+      coverage-retention-days:
+        description: 'Number of days to retain coverage artifact'
+        required: false
+        type: number
+        default: 3
 
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-go-build
+  cancel-in-progress: true
+
 jobs:
   build:
+    timeout-minutes: 15
     strategy:
       matrix:
         os: [ubuntu-latest, macos-latest]
@@ -30,24 +56,24 @@ jobs:
       - name: Install Go
         uses: actions/setup-go@v6
         with:
-          go-version-file: go.mod
-
-      - uses: actions/cache@v5
-        with:
-          path: |
-            ~/.cache/go-build
-            ~/go/pkg/mod
-          key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-go-
+          go-version-file: ${{ inputs.go-version-file }}
+          cache: true
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:
-          version: ${{ inputs.golangci-lint }}
+          version: ${{ inputs.golangci-lint-version }}
 
       - name: Build
         run: go build -v ./...
 
       - name: Test
-        run: go test -v -race ./... -cover
+        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Upload coverage
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ inputs.coverage-artifact-name }}
+          path: coverage.out
+          retention-days: ${{ inputs.coverage-retention-days }}

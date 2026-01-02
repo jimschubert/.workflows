@@ -1,0 +1,44 @@
+name: Lint Go
+on:
+  workflow_call:
+    inputs:
+      go-version-file:
+        description: 'Path to go.mod file for Go version'
+        required: false
+        type: string
+        default: 'go.mod'
+      golangci-lint-version:
+        description: 'Version of golangci-lint to use'
+        required: false
+        type: string
+        default: 'v2.7.2'
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-go-lint
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: Lint with golangci
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: ${{ inputs.go-version-file }}
+          cache: true
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: ${{ inputs.golangci-lint-version }}
