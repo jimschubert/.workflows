@@ -1,0 +1,12 @@
+{
+  "name": "Go Pull Request Workflow",
+  "description": "A reusable workflow template for Go pull request builds with caching and coverage.",
+  "iconName": "golang",
+  "categories": [
+    "Go",
+    "continuous-integration"
+  ],
+  "filePatterns": [
+    "^go.mod$", "^go.sum$"
+  ]
+}
