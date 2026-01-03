@@ -8,13 +8,16 @@ on:
         required: true
         default: 'patch'
         type: string
+      create_release:
+        description: 'Create a GitHub release with changelog'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   tag:
     name: Tag next version
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -29,6 +32,7 @@ jobs:
           default_bump: ${{ inputs.bump }}
 
       - name: Create a GitHub release
+        if: ${{ inputs.create_release }}
         uses: ncipollo/release-action@v1
         with:
           tag: ${{ steps.tag_version.outputs.new_tag }}
