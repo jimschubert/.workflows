@@ -25,10 +25,25 @@ on:
         required: false
         type: string
         default: '.github/changelog.yml'
+      # NOTE: any private repo must set this to '', as attestations are only available for public repos (unless you have GitHub Enterprise)
+      artifact-checksums-path:
+        description: 'Path to the artifacts checksum file (default: dist/checksums.txt)'
+        required: false
+        default: 'dist/checksums.txt'
+        type: string
+      docker-digests-path:
+        description: 'Path to the docker digests file (default: dist/digests.txt)'
+        required: false
+        default: 'dist/digests.txt'
+        type: string
 
 permissions:
   contents: write
   packages: write
+  # id-token is required for attestation (signing)
+  id-token: write
+  attestations: write
+  artifact-metadata: write
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}-go-build-goreleaser
@@ -134,7 +149,10 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
+      - uses: anchore/sbom-action/download-syft@v0.22.1
+
       - name: GoReleaser
+        id: goreleaser
         uses: goreleaser/goreleaser-action@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -143,3 +161,57 @@ jobs:
           distribution: goreleaser
           version: latest
           args: release --clean ${{ env.flags }} ${{ env.release_notes }}
+
+      - name: Extract Docker image info for attestation
+        id: docker-info
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          # Parse goreleaser artifacts to extract Docker image info
+          ARTIFACTS='${{ steps.goreleaser.outputs.artifacts }}'
+          
+          # Extract the first Docker image name (without tag) and its digest
+          # The image name format is: registry/image:tag or image:tag
+          # We need: registry/image (with docker.io as default if no registry)
+          
+          # Get unique image digests (all tags point to same digest)
+          DIGEST=$(echo "$ARTIFACTS" | jq -r '[.[] | select(.type == "Docker Image")] | .[0].extra.Digest')
+          
+          # Get image name from first Docker image, strip the tag
+          FULL_IMAGE=$(echo "$ARTIFACTS" | jq -r '[.[] | select(.type == "Docker Image")] | .[0].name')
+          
+          # Remove tag (everything after last colon)
+          IMAGE_NAME="${FULL_IMAGE%:*}"
+          
+          # If no registry (no slash before image name), prepend docker.io
+          if [[ "$IMAGE_NAME" != *"/"* ]]; then
+            IMAGE_NAME="docker.io/$IMAGE_NAME"
+          elif [[ "$IMAGE_NAME" != *"."* ]]; then
+            # Has slash but no dot in registry part = Docker Hub user/image
+            IMAGE_NAME="docker.io/$IMAGE_NAME"
+          fi
+          
+          echo "image-name=$IMAGE_NAME" >> $GITHUB_OUTPUT
+          echo "digest=$DIGEST" >> $GITHUB_OUTPUT
+          echo "Docker image for attestation: $IMAGE_NAME@$DIGEST"
+
+      - name: Attest Docker Image(s) via checksums
+        uses: actions/attest-build-provenance@v3.2.0
+        if: startsWith(github.ref, 'refs/tags/v') && hashFiles(inputs.docker-digests-path) != ''
+        with:
+          subject-name: ${{ steps.docker-info.outputs.image-name }}
+          subject-checksums: ${{ inputs.docker-digests-path }}
+          push-to-registry: true
+
+      - name: Attest Docker Image(s) via digest
+        uses: actions/attest-build-provenance@v3.2.0
+        if: startsWith(github.ref, 'refs/tags/v') && hashFiles(inputs.docker-digests-path) == '' && steps.docker-info.outputs.image-name != ''
+        with:
+          subject-name: ${{ steps.docker-info.outputs.image-name }}
+          subject-digest: ${{ steps.docker-info.outputs.digest }}
+          push-to-registry: true
+          
+      - name: Attest Artifact(s)
+        uses: actions/attest-build-provenance@v3.2.0
+        if: startsWith(github.ref, 'refs/tags/v') && hashFiles(inputs.artifact-checksums-path) != ''
+        with:
+          subject-checksums: ${{ inputs.artifact-checksums-path }}
