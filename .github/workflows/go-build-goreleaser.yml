@@ -179,15 +179,26 @@ jobs:
           # Parse goreleaser artifacts to extract Docker image info
           ARTIFACTS='${{ steps.goreleaser.outputs.artifacts }}'
           
-          # Extract the first Docker image name (without tag) and its digest
-          # The image name format is: registry/image:tag or image:tag
-          # We need: registry/image (with docker.io as default if no registry)
+          # Check if there are any Docker images
+          DOCKER_COUNT=$(echo "$ARTIFACTS" | jq '[.[] | select(.type == "Docker Image")] | length')
+          
+          if [ "$DOCKER_COUNT" -eq 0 ]; then
+            echo "No Docker images found in artifacts"
+            echo "has-docker=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
           
           # Get unique image digests (all tags point to same digest)
-          DIGEST=$(echo "$ARTIFACTS" | jq -r '[.[] | select(.type == "Docker Image")] | .[0].extra.Digest')
+          DIGEST=$(echo "$ARTIFACTS" | jq -r '[.[] | select(.type == "Docker Image")] | .[0].extra.Digest // empty')
           
           # Get image name from first Docker image, strip the tag
-          FULL_IMAGE=$(echo "$ARTIFACTS" | jq -r '[.[] | select(.type == "Docker Image")] | .[0].name')
+          FULL_IMAGE=$(echo "$ARTIFACTS" | jq -r '[.[] | select(.type == "Docker Image")] | .[0].name // empty')
+          
+          if [ -z "$DIGEST" ] || [ -z "$FULL_IMAGE" ]; then
+            echo "Docker image or digest not found"
+            echo "has-docker=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
           
           # Remove tag (everything after last colon)
           IMAGE_NAME="${FULL_IMAGE%:*}"
@@ -200,6 +211,7 @@ jobs:
             IMAGE_NAME="docker.io/$IMAGE_NAME"
           fi
           
+          echo "has-docker=true" >> $GITHUB_OUTPUT
           echo "image-name=$IMAGE_NAME" >> $GITHUB_OUTPUT
           echo "digest=$DIGEST" >> $GITHUB_OUTPUT
           echo "Docker image for attestation: $IMAGE_NAME@$DIGEST"
@@ -208,6 +220,7 @@ jobs:
         uses: actions/attest-build-provenance@v3.2.0
         if: >-
           startsWith(github.ref, 'refs/tags/v') && 
+          steps.docker-info.outputs.has-docker == 'true' &&
           hashFiles(inputs.docker-digests-path) != ''
         with:
           subject-name: ${{ steps.docker-info.outputs.image-name }}
@@ -218,6 +231,7 @@ jobs:
         uses: actions/attest-build-provenance@v3.2.0
         if: >-
           startsWith(github.ref, 'refs/tags/v') &&
+          steps.docker-info.outputs.has-docker == 'true' &&
           hashFiles(inputs.docker-digests-path) == '' &&
           steps.docker-info.outputs.digest != ''
         with:
