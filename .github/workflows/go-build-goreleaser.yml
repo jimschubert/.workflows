@@ -85,7 +85,9 @@ jobs:
           fi
 
       - name: Find Last Tag
-        if: startsWith(github.ref, 'refs/tags/v') && steps.changelog-config.outputs.exists == 'true'
+        if: >-
+          startsWith(github.ref, 'refs/tags/v') &&
+          steps.changelog-config.outputs.exists == 'true'
         id: last
         uses: jimschubert/query-tag-action@v2
         with:
@@ -95,7 +97,9 @@ jobs:
           skip-unshallow: 'true'
 
       - name: Find Current Tag
-        if: startsWith(github.ref, 'refs/tags/v') && steps.changelog-config.outputs.exists == 'true'
+        if: >-
+          startsWith(github.ref, 'refs/tags/v') &&
+          steps.changelog-config.outputs.exists == 'true'
         id: current
         uses: jimschubert/query-tag-action@v2
         with:
@@ -105,7 +109,9 @@ jobs:
           skip-unshallow: 'true'
 
       - name: Create Changelog
-        if: startsWith(github.ref, 'refs/tags/v') && steps.changelog-config.outputs.exists == 'true'
+        if: >-
+          startsWith(github.ref, 'refs/tags/v') && 
+          steps.changelog-config.outputs.exists == 'true'
         id: changelog
         uses: jimschubert/beast-changelog-action@v1
         with:
@@ -114,7 +120,9 @@ jobs:
           TO: ${{ steps.current.outputs.tag }}
 
       - name: Set Release Notes Flag
-        if: startsWith(github.ref, 'refs/tags/v') && steps.changelog-config.outputs.exists == 'true'
+        if: >-
+          startsWith(github.ref, 'refs/tags/v') && 
+          steps.changelog-config.outputs.exists == 'true'
         run: echo "release_notes=--release-notes=${{ github.workspace }}/.github/CHANGELOG.md" >> $GITHUB_ENV
 
       - name: Check for Docker Environment
@@ -130,16 +138,22 @@ jobs:
           fi
 
       - name: Set up QEMU
-        if: success() && startsWith(github.ref, 'refs/tags/v') && steps.has-docker.outputs.available == 'true'
+        if: >-
+          success() && startsWith(github.ref, 'refs/tags/v') && 
+          steps.has-docker.outputs.available == 'true'
         uses: docker/setup-qemu-action@v3
 
       - name: Set up Docker Buildx
         id: buildx
-        if: success() && startsWith(github.ref, 'refs/tags/v') && steps.has-docker.outputs.available == 'true'
+        if: >-
+          success() && startsWith(github.ref, 'refs/tags/v') && 
+          steps.has-docker.outputs.available == 'true'
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Docker Hub
-        if: success() && startsWith(github.ref, 'refs/tags/v') && steps.has-docker.outputs.available == 'true'
+        if: >-
+          success() && startsWith(github.ref, 'refs/tags/v') && 
+          steps.has-docker.outputs.available == 'true'
         uses: docker/login-action@v3.7.0
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
@@ -192,7 +206,9 @@ jobs:
 
       - name: Attest Docker Image(s) via checksums
         uses: actions/attest-build-provenance@v3.2.0
-        if: startsWith(github.ref, 'refs/tags/v') && hashFiles(inputs.docker-digests-path) != ''
+        if: >-
+          startsWith(github.ref, 'refs/tags/v') && 
+          hashFiles(inputs.docker-digests-path) != ''
         with:
           subject-name: ${{ steps.docker-info.outputs.image-name }}
           subject-checksums: ${{ inputs.docker-digests-path }}
@@ -200,7 +216,10 @@ jobs:
 
       - name: Attest Docker Image(s) via digest
         uses: actions/attest-build-provenance@v3.2.0
-        if: startsWith(github.ref, 'refs/tags/v') && hashFiles(inputs.docker-digests-path) == '' && steps.docker-info.outputs.image-name != ''
+        if: >-
+          startsWith(github.ref, 'refs/tags/v') &&
+          hashFiles(inputs.docker-digests-path) == '' &&
+          steps.docker-info.outputs.digest != ''
         with:
           subject-name: ${{ steps.docker-info.outputs.image-name }}
           subject-digest: ${{ steps.docker-info.outputs.digest }}
@@ -208,6 +227,8 @@ jobs:
           
       - name: Attest Artifact(s)
         uses: actions/attest-build-provenance@v3.2.0
-        if: startsWith(github.ref, 'refs/tags/v') && hashFiles(inputs.artifact-checksums-path) != ''
+        if: >-
+          startsWith(github.ref, 'refs/tags/v') && 
+          hashFiles(inputs.artifact-checksums-path) != ''
         with:
           subject-checksums: ${{ inputs.artifact-checksums-path }}
