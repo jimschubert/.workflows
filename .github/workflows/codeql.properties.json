@@ -1,0 +1,11 @@
+{
+  "name": "CodeQL Analysis Workflow",
+  "description": "A reusable workflow for GitHub CodeQL security scanning. Supports multiple languages including actions, Go, JavaScript/TypeScript, Python, and more.",
+  "iconName": "github",
+  "categories": [
+    "security",
+    "code-scanning",
+    "continuous-integration"
+  ],
+  "filePatterns": []
+}
