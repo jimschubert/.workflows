@@ -143,11 +143,10 @@ jobs:
           
           # Check if any Dockerfile in root contains dhi.io
           if [ ! -z "${DHI_PASSWORD}" ]; then
-            if ls Dockerfile *.Dockerfile 2>/dev/null | grep -q .; then
-              if grep -l "dhi\.io" Dockerfile *.Dockerfile 2>/dev/null | grep -q .; then
-                echo "dhi-available=true" >> $GITHUB_OUTPUT
-                echo "✅ DHI credentials are available and dhi.io registry detected in Dockerfile(s)"
-              fi
+            # Use find to safely check for Dockerfile(s) and search for dhi.io
+            if find . -maxdepth 1 -type f \( -name "Dockerfile" -o -name "*.Dockerfile" \) -exec grep -l "dhi\.io" {} + 2>/dev/null | grep -q .; then
+              echo "dhi-available=true" >> $GITHUB_OUTPUT
+              echo "✅ DHI credentials are available and dhi.io registry detected in Dockerfile(s)"
             fi
           fi
 
