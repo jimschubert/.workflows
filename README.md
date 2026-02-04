@@ -25,8 +25,10 @@ jobs:
 
 | Name | Description |
 | --- | --- |
+| `codeql.yml` | Runs GitHub CodeQL security analysis. Supports multiple languages. |
 | `go-build.yml` | Builds and tests Go code, uploads coverage. |
 | `go-build-goreleaser.yml` | Runs `go-build.yml` and publishes via GoReleaser. |
 | `go-lint.yml` | Runs `golangci-lint`. |
 | `go-pr.yml` | Dedicated pull request build with coverage. |
 | `go-release.yml` | Generates changelog and creates GitHub release. |
+| `tag-next-version.yml` | Bumps semantic version and creates a tag. Optionally creates a release. |
