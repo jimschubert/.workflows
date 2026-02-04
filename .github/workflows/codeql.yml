@@ -62,9 +62,6 @@ on:
         default: '["actions", "go"]'
         # CodeQL supports: 'actions', 'c-cpp', 'csharp', 'go', 'java-kotlin', 'javascript-typescript', 'python', 'ruby', 'rust', 'swift'
 
-permissions:
-  contents: read
-
 jobs:
   analyze:
     name: Analyze (${{ matrix.language }})
