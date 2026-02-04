@@ -24,11 +24,6 @@ on:
         required: false
         type: string
         default: 'go.mod'
-      golangci-lint:
-        description: 'Version of golangci-lint to use (deprecated, use golangci-lint-version instead)'
-        required: false
-        type: string
-        default: 'v2.7.2'
       golangci-lint-version:
         description: 'Version of golangci-lint to use'
         required: false
