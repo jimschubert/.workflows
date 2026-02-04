@@ -32,6 +32,8 @@ jobs:
   # Minimal usage (analyzes 'actions' and 'go' by default):
   codeql:
     uses: ./.github/workflows/codeql.yml
+    with:
+      languages: '["actions"]'
   # Or, specify languages:
   # codeql:
   #   uses: jimschubert/.workflows/.github/workflows/codeql.yml@main
