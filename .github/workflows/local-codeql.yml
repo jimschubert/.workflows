@@ -21,6 +21,13 @@ on:
     branches: [ "main", "master"]
   schedule:
     - cron: '05 10 * * 4'
+
+permissions:
+  security-events: write
+  packages: read
+  actions: read
+  contents: read
+
 jobs:
   # Minimal usage (analyzes 'actions' and 'go' by default):
   codeql:
