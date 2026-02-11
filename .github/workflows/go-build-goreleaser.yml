@@ -171,7 +171,7 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - uses: anchore/sbom-action/download-syft@v0.22.1
+      - uses: anchore/sbom-action/download-syft@v0.22.2
 
       - name: GoReleaser
         id: goreleaser
