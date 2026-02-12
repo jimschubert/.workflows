@@ -85,6 +85,7 @@ jobs:
         with:
           go-version-file: ${{ inputs.go-version-file }}
           cache: true
+          check-latest: true
 
       - name: Check for Changelog Config
         id: changelog-config
