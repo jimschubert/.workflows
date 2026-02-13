@@ -27,12 +27,12 @@ on:
         required: true
         type: string
       target-registry:
-        description: 'Target registry URL (e.g., ghcr.io)'
+        description: 'Target registry URL. If empty, inferred from target-image prefix (e.g., ghcr.io)'
         required: false
         type: string
-        default: 'ghcr.io'
+        default: ''
       target-username:
-        description: 'Username for target registry authentication'
+        description: 'Username for target registry authentication. Defaults to github.actor for ghcr.io'
         required: false
         type: string
         default: ''
@@ -45,17 +45,17 @@ on:
         description: 'Create major version tag (v1) from source tag'
         required: false
         type: boolean
-        default: false
+        default: true
       create-minor-tag:
         description: 'Create minor version tag (v1.2) from source tag'
         required: false
         type: boolean
-        default: false
+        default: true
       create-latest-tag:
         description: 'Create latest tag'
         required: false
         type: boolean
-        default: false
+        default: true
     secrets:
       target-password:
         description: 'Password/token for target registry authentication'
@@ -69,7 +69,8 @@ jobs:
   mirror:
     runs-on: ubuntu-latest
     steps:
-      - name: Validate inputs
+      - name: Validate inputs and infer registry
+        id: config
         run: |
           if [[ -z "${{ inputs.source-image }}" ]]; then
             echo "Error: source-image is required"
@@ -79,13 +80,50 @@ jobs:
             echo "Error: target-image is required"
             exit 1
           fi
+          
+          # Infer registry from target-image if not provided
+          TARGET_IMAGE="${{ inputs.target-image }}"
+          if [[ -n "${{ inputs.target-registry }}" ]]; then
+            REGISTRY="${{ inputs.target-registry }}"
+          else
+            # Extract registry from image name (first segment before /)
+            # e.g., ghcr.io/jimschubert/labeler -> ghcr.io
+            # e.g., registry.example.com/org/app -> registry.example.com
+            REGISTRY="${TARGET_IMAGE%%/*}"
+            
+            # If no slash found or registry looks like a Docker Hub user/org, default to docker.io
+            if [[ "$REGISTRY" == "$TARGET_IMAGE" ]] || [[ ! "$REGISTRY" =~ \. ]]; then
+              REGISTRY="docker.io"
+            fi
+          fi
+          echo "registry=$REGISTRY" >> $GITHUB_OUTPUT
+          echo "Inferred registry: $REGISTRY"
+          
+          # Determine username
+          if [[ -n "${{ inputs.target-username }}" ]]; then
+            USERNAME="${{ inputs.target-username }}"
+          else
+            USERNAME="${{ github.actor }}"
+          fi
+          echo "username=$USERNAME" >> $GITHUB_OUTPUT
+          echo "Using username: $USERNAME"
+          
+          # Determine if we should use GITHUB_TOKEN as fallback
+          # Only use GITHUB_TOKEN if: registry is ghcr.io AND username is github.actor AND no password provided
+          if [[ "$REGISTRY" == "ghcr.io" && "$USERNAME" == "${{ github.actor }}" ]]; then
+            echo "use_github_token=true" >> $GITHUB_OUTPUT
+            echo "Will use GITHUB_TOKEN for authentication (ghcr.io with github.actor)"
+          else
+            echo "use_github_token=false" >> $GITHUB_OUTPUT
+            echo "Will use provided target-password secret for authentication"
+          fi
 
       - name: Log in to target registry
         uses: docker/login-action@v3
         with:
-          registry: ${{ inputs.target-registry }}
-          username: ${{ inputs.target-username || github.actor }}
-          password: ${{ secrets.target-password || secrets.GITHUB_TOKEN }}
+          registry: ${{ steps.config.outputs.registry }}
+          username: ${{ steps.config.outputs.username }}
+          password: ${{ steps.config.outputs.use_github_token == 'true' && secrets.GITHUB_TOKEN || secrets.target-password }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
