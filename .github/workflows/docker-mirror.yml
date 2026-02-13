@@ -160,24 +160,24 @@ jobs:
           docker buildx imagetools inspect "${SOURCE_IMAGE}"
           echo ""
           
-          # Build tag list
+          # Build tag list (just the full image:tag values)
           TAGS=()
           
           # Extract the tag from source image and use it on target
           SOURCE_TAG="${SOURCE_IMAGE##*:}"
-          TAGS+=("--tag ${TARGET_IMAGE}:${SOURCE_TAG}")
+          TAGS+=("${TARGET_IMAGE}:${SOURCE_TAG}")
           
           # Add version-based tags if requested
           if [[ "${{ inputs.create-major-tag }}" == "true" && -n "${{ steps.version.outputs.major }}" ]]; then
-            TAGS+=("--tag ${TARGET_IMAGE}:v${{ steps.version.outputs.major }}")
+            TAGS+=("${TARGET_IMAGE}:v${{ steps.version.outputs.major }}")
           fi
           
           if [[ "${{ inputs.create-minor-tag }}" == "true" && -n "${{ steps.version.outputs.major }}" && -n "${{ steps.version.outputs.minor }}" ]]; then
-            TAGS+=("--tag ${TARGET_IMAGE}:v${{ steps.version.outputs.major }}.${{ steps.version.outputs.minor }}")
+            TAGS+=("${TARGET_IMAGE}:v${{ steps.version.outputs.major }}.${{ steps.version.outputs.minor }}")
           fi
           
           if [[ "${{ inputs.create-latest-tag }}" == "true" ]]; then
-            TAGS+=("--tag ${TARGET_IMAGE}:latest")
+            TAGS+=("${TARGET_IMAGE}:latest")
           fi
           
           # Add additional custom tags
@@ -187,22 +187,28 @@ jobs:
               # Trim whitespace
               tag=$(echo "$tag" | xargs)
               if [[ -n "$tag" ]]; then
-                TAGS+=("--tag ${TARGET_IMAGE}:${tag}")
+                TAGS+=("${TARGET_IMAGE}:${tag}")
               fi
             done
           fi
           
           # Display tags that will be created
           echo "=== Creating the following tags ==="
-          for tag_arg in "${TAGS[@]}"; do
-            echo "  ${tag_arg#--tag }"
+          for tag in "${TAGS[@]}"; do
+            echo "  ${tag}"
           done
           echo ""
+          
+          # Build the --tag arguments
+          TAG_ARGS=()
+          for tag in "${TAGS[@]}"; do
+            TAG_ARGS+=("--tag" "${tag}")
+          done
           
           # Mirror all platforms with all tags
           echo "=== Mirroring multi-platform image ==="
           docker buildx imagetools create \
-            "${TAGS[@]}" \
+            "${TAG_ARGS[@]}" \
             "${SOURCE_IMAGE}"
           
           echo ""
@@ -211,6 +217,5 @@ jobs:
           # Verify the mirror
           echo ""
           echo "=== Verifying first target tag ==="
-          FIRST_TAG="${TAGS[0]#--tag }"
-          docker buildx imagetools inspect "${FIRST_TAG}"
+          docker buildx imagetools inspect "${TAGS[0]}"
 
