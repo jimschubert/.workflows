@@ -1,0 +1,13 @@
+{
+  "name": "Docker Image Mirror Workflow",
+  "description": "A workflow template for mirroring multi-platform Docker images between registries, preserving all architectures and attestations.",
+  "iconName": "docker",
+  "categories": [
+    "Docker",
+    "continuous-integration"
+  ],
+  "filePatterns": [
+    "^Dockerfile$", "^.goreleaser.yml$"
+  ]
+}
+
