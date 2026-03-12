@@ -73,20 +73,8 @@ jobs:
           cache: true
         id: go
 
-      - name: Install common dependencies (Ubuntu)
-        if: runner.os == 'Linux'
-        run: |
-          if [ -f "go.mod" ] && grep -q "fyne.io/fyne/v2" go.mod; then
-            sudo apt-get update
-            sudo apt-get install -y \
-              libgl1-mesa-dev \
-              xorg-dev \
-              libxcursor-dev \
-              libxrandr-dev \
-              libxinerama-dev \
-              libxi-dev \
-              libxxf86vm-dev
-          fi
+      - name: Install Fyne dependencies when needed
+        uses: ./.github/actions/setup-fyne-linux
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9

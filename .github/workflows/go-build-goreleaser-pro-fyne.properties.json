@@ -1,0 +1,12 @@
+{
+  "name": "Go Release Workflow",
+  "description": "A CI workflow template for releasing Fyne-based Go projects which require a Goreleaser flow.",
+  "iconName": "golang",
+  "categories": [
+    "Go",
+    "continuous-integration"
+  ],
+  "filePatterns": [
+    "^go.mod$", "^go.sum$", ".github/changelog.yml"
+  ]
+}
