@@ -117,6 +117,7 @@ jobs:
 
   # see https://carlosbecker.com/posts/goreleaser-split-merge/
   prepare:
+    needs: lint
     if: needs.lint.result == 'success' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     name: Prepare Goreleaser Build (Split)
     strategy:
@@ -195,7 +196,7 @@ jobs:
 
   publish:
     needs: prepare
-    if: needs.lint.result == 'success' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    if: needs.prepare.result == 'success' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     name: Publish Goreleaser Build (Combine)
     timeout-minutes: 30
     runs-on: ubuntu-latest
