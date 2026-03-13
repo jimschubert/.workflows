@@ -44,6 +44,16 @@ on:
         required: false
         default: 'dist/digests.txt'
         type: string
+      coverage-artifact-name:
+        description: 'Name of the coverage artifact'
+        required: false
+        type: string
+        default: 'coverage'
+      coverage-retention-days:
+        description: 'Number of days to retain coverage artifact'
+        required: false
+        type: number
+        default: 3
 
 permissions:
   contents: write
@@ -59,11 +69,26 @@ concurrency:
 
 jobs:
   lint:
-    uses: ./.github/workflows/go-lint.yml
-    with:
-      go-version-file: ${{ inputs.go-version-file }}
-      golangci-lint-version: ${{ inputs.golangci-lint-version }}
-    secrets: inherit
+    name: Lint with golangci
+    timeout-minutes: 10
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Install Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: ${{ inputs.go-version-file }}
+          cache: true
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: ${{ inputs.golangci-lint-version }}
+
 
   # see https://carlosbecker.com/posts/goreleaser-split-merge/
   prepare:
@@ -119,6 +144,17 @@ jobs:
           key: ${{ matrix.GOOS }}-${{ env.sha_short }}
 
       - uses: anchore/sbom-action/download-syft@v0.22.1
+
+      - name: Test
+        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+
+      - name: Upload coverage
+        if: matrix.os == 'ubuntu-latest'
+        uses: actions/upload-artifact@v6
+        with:
+          name: ${{ inputs.coverage-artifact-name }}
+          path: coverage.out
+          retention-days: ${{ inputs.coverage-retention-days }}
 
       - uses: goreleaser/goreleaser-action@v7
         if: steps.cache.outputs.cache-hit != 'true'
