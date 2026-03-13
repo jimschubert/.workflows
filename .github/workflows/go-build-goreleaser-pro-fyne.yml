@@ -117,7 +117,7 @@ jobs:
 
   # see https://carlosbecker.com/posts/goreleaser-split-merge/
   prepare:
-    if: needs.build.result == 'success' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    if: needs.lint.result == 'success' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     strategy:
       matrix:
         GOOS: [linux, darwin]
@@ -194,7 +194,7 @@ jobs:
 
   publish:
     needs: prepare
-    if: needs.build.result == 'success' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    if: needs.lint.result == 'success' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
     timeout-minutes: 30
     runs-on: ubuntu-latest
     steps:
