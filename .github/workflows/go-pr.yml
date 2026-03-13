@@ -73,8 +73,30 @@ jobs:
           cache: true
         id: go
 
-      - name: Install Fyne dependencies when needed
-        uses: ./.github/actions/setup-fyne-linux
+      - name: Install Linux Dependencies when needed
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if [ ! -f "go.mod" ]; then
+          echo "No go.mod found; skipping"
+          exit 0
+          fi
+
+          if ! go list -m fyne.io/fyne/v2 >/dev/null 2>&1; then
+          echo "Fyne v2 not found in go.mod; skipping"
+          exit 0
+          fi
+
+          echo "Installing Fyne Linux dependencies"
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+          gcc \
+          libgl1-mesa-dev \
+          xorg-dev \
+          libxkbcommon-dev \
+          gcc-aarch64-linux-gnu
 
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9

@@ -51,9 +51,6 @@ jobs:
           go-version-file: ${{ inputs.go-version-file }}
           cache: true
 
-      - name: Install Fyne dependencies when needed
-        uses: ./.github/actions/setup-fyne-linux
-
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v9
         with:

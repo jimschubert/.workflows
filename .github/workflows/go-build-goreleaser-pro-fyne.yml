@@ -85,7 +85,7 @@ jobs:
           cache: true
           check-latest: true
 
-      - name: Install Fyne dependencies on Ubuntu when needed
+      - name: Install Linux Dependencies when needed
         if: runner.os == 'Linux'
         shell: bash
         run: |

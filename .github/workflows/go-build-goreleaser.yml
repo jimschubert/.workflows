@@ -87,9 +87,6 @@ jobs:
           cache: true
           check-latest: true
 
-      - name: Install Fyne dependencies when needed
-        uses: ./.github/actions/setup-fyne-linux
-
       - name: Check for Changelog Config
         id: changelog-config
         run: |
