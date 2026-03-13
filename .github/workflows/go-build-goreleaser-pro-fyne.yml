@@ -58,8 +58,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    uses: ./.github/workflows/go-build.yml
+  lint:
+    uses: ./.github/workflows/go-lint.yml
     with:
       go-version-file: ${{ inputs.go-version-file }}
       golangci-lint-version: ${{ inputs.golangci-lint-version }}
@@ -68,7 +68,6 @@ jobs:
   # see https://carlosbecker.com/posts/goreleaser-split-merge/
   prepare:
     if: needs.build.result == 'success' && (startsWith(github.ref, 'refs/tags/v') || github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
-    needs: build
     strategy:
       matrix:
         GOOS: [linux, darwin]
