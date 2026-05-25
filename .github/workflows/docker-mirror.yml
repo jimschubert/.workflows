@@ -119,7 +119,7 @@ jobs:
           fi
 
       - name: Log in to target registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ steps.config.outputs.registry }}
           username: ${{ steps.config.outputs.username }}
