@@ -46,6 +46,7 @@ jobs:
       - name: Find Last Tag
         if: success()
         id: last
+        continue-on-error: true
         uses: jimschubert/query-tag-action@v2
         with:
           include: 'v*'
@@ -64,12 +65,28 @@ jobs:
           skip-unshallow: 'true'
 
       - name: Create Changelog
-        if: success()
+        if: success() && steps.last.outcome == 'success'
         id: changelog
         uses: jimschubert/beast-changelog-action@v1
         with:
           CONFIG_LOCATION: ${{ inputs.changelog-config }}
           FROM: ${{ steps.last.outputs.tag }}
+          TO: ${{ steps.current.outputs.tag }}
+
+      - name: Find First Commit
+        if: success() && steps.last.outcome != 'success'
+        id: first-commit
+        run: |
+          FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD | head -n 1)
+          echo "sha=$FIRST_COMMIT" >> $GITHUB_OUTPUT
+
+      - name: Create First Release Changelog
+        if: success() && steps.last.outcome != 'success'
+        id: changelog-first
+        uses: jimschubert/beast-changelog-action@v1
+        with:
+          CONFIG_LOCATION: ${{ inputs.changelog-config }}
+          FROM: ${{ steps.first-commit.outputs.sha }}
           TO: ${{ steps.current.outputs.tag }}
 
       - name: View Changelog

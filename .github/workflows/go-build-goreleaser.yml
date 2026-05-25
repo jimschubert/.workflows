@@ -102,6 +102,7 @@ jobs:
           startsWith(github.ref, 'refs/tags/v') &&
           steps.changelog-config.outputs.exists == 'true'
         id: last
+        continue-on-error: true
         uses: jimschubert/query-tag-action@v2
         with:
           include: 'v*'
@@ -123,8 +124,9 @@ jobs:
 
       - name: Create Changelog
         if: >-
-          startsWith(github.ref, 'refs/tags/v') && 
-          steps.changelog-config.outputs.exists == 'true'
+          startsWith(github.ref, 'refs/tags/v') &&
+          steps.changelog-config.outputs.exists == 'true' &&
+          steps.last.outcome == 'success'
         id: changelog
         uses: jimschubert/beast-changelog-action@v1
         with:
@@ -132,10 +134,33 @@ jobs:
           FROM: ${{ steps.last.outputs.tag }}
           TO: ${{ steps.current.outputs.tag }}
 
+      - name: Find First Commit
+        if: >-
+          startsWith(github.ref, 'refs/tags/v') &&
+          steps.changelog-config.outputs.exists == 'true' &&
+          steps.last.outcome != 'success'
+        id: first-commit
+        run: |
+          FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD | head -n 1)
+          echo "sha=$FIRST_COMMIT" >> $GITHUB_OUTPUT
+
+      - name: Create First Release Changelog
+        if: >-
+          startsWith(github.ref, 'refs/tags/v') &&
+          steps.changelog-config.outputs.exists == 'true' &&
+          steps.last.outcome != 'success'
+        id: changelog-first
+        uses: jimschubert/beast-changelog-action@v1
+        with:
+          CONFIG_LOCATION: ${{ inputs.changelog-config }}
+          FROM: ${{ steps.first-commit.outputs.sha }}
+          TO: ${{ steps.current.outputs.tag }}
+
       - name: Set Release Notes Flag
         if: >-
-          startsWith(github.ref, 'refs/tags/v') && 
-          steps.changelog-config.outputs.exists == 'true'
+          startsWith(github.ref, 'refs/tags/v') &&
+          steps.changelog-config.outputs.exists == 'true' &&
+          (steps.changelog.outcome == 'success' || steps.changelog-first.outcome == 'success')
         run: echo "release_notes=--release-notes=${{ github.workspace }}/.github/CHANGELOG.md" >> $GITHUB_ENV
 
       - name: Check for Docker Environment
